@@ -103,7 +103,7 @@ There are cases in garden_harvest that do not match with garden_planting, thus t
 
   3. I would like to understand how much money I "saved" by gardening, for each vegetable type. Describe how I could use the `garden_harvest` and `garden_spending` datasets, along with data from somewhere like [this](https://products.wholefoodsmarket.com/search?sort=relevance&store=10542) to answer this question. You can answer this in words, referencing various join functions. You don't need R code but could provide some if it's helpful.
   
-First, I need to pipe in the garden harvest data set. From there, 
+First, I need to pipe in the garden harvest data set. From there, we need to group by vegetable. Next, mutate a new variable for the total amount spent and the total weight harvested. We need to also create the same variables in the garden spending data so we can then left_join the two datasets. Then we can also full_join the wholefoods data in order to find out how much each vegetable cost per pound. From there we can multiply the total weight harvested for each vegetable and then subract how much you actually spent.   
 
 
   4. Subset the data to tomatoes. Reorder the tomato varieties from smallest to largest first harvest date. Create a barplot of total harvest in pounds for each variety, in the new order.
@@ -181,52 +181,129 @@ It's natural to expect that bikes are rented more at some times of day, some day
   7. A density plot, which is a smoothed out histogram, of the events versus `sdate`. Use `geom_density()`.
   
 ```{r}
-
+Trips %>% 
+  ggplot()+
+  geom_density(aes(x=sdate))+
+  labs(x="",
+       y="",
+       title= "Number of events on each day from Oct.-Jan.")
 ```
   
   8. A density plot of the events versus time of day.  You can use `mutate()` with `lubridate`'s  `hour()` and `minute()` functions to extract the hour of the day and minute within the hour from `sdate`. Hint: A minute is 1/60 of an hour, so create a variable where 3:30 is 3.5 and 3:45 is 3.75.
   
 ```{r}
-
+Trips %>% 
+  mutate(hour_of_day=hour(sdate),
+         minute_w_hr=(minute(sdate)/60),
+         time_of_day= hour_of_day+minute_w_hr) %>%   
+  ggplot()+
+  geom_density(aes(x=(time_of_day)))+
+  labs(x="",
+       y="",
+       title= "Number of events at each time of day from 00:00- 24:00.")
 ```
   
   9. A bar graph of the events versus day of the week. Put day on the y-axis.
   
 ```{r}
-
+Trips %>% 
+  mutate(day_of_week = wday(sdate, label = TRUE)) %>%    
+  ggplot()+
+  geom_bar(aes(y=(day_of_week)))+
+  labs(x="",
+       y="",
+       title= "Number of events on each day of the week")
 ```
   
   10. Facet your graph from exercise 8. by day of the week. Is there a pattern?
   
 ```{r}
-
+Trips %>% 
+  mutate(hour_of_day=hour(sdate),
+         minute_w_hr=(minute(sdate)/60),
+         time_of_day= hour_of_day+minute_w_hr,
+         day_of_week = wday(sdate, label = TRUE)) %>%   
+  ggplot()+
+  geom_density(aes(x=(time_of_day)))+
+  labs(x="",
+       y="",
+       title= "Number of events at each time of day from 00:00- 24:00.")+
+  facet_wrap(vars(day_of_week))
 ```
   
+There seems to be a pattern in that people tend to rent in the mornings from 6-10am and then again at 3-8pm during the weekdays and on the weekend, the number of renters doesn't dip until the end of the day.
+
 The variable `client` describes whether the renter is a regular user (level `Registered`) or has not joined the bike-rental organization (`Causal`). The next set of exercises investigate whether these two different categories of users show different rental behavior and how `client` interacts with the patterns you found in the previous exercises. 
 
   11. Change the graph from exercise 10 to set the `fill` aesthetic for `geom_density()` to the `client` variable. You should also set `alpha = .5` for transparency and `color=NA` to suppress the outline of the density function.
   
 ```{r}
-
+Trips %>% 
+  mutate(hour_of_day=hour(sdate),
+         minute_w_hr=(minute(sdate)/60),
+         time_of_day= hour_of_day+minute_w_hr,
+         day_of_week = wday(sdate, label = TRUE)) %>%   
+  ggplot()+
+  geom_density(aes(x=(time_of_day),fill=client),alpha=.5,color=NA)+
+  labs(x="",
+       y="",
+       title= "Number of events at each time of day from 00:00- 24:00.")+
+  facet_wrap(vars(day_of_week))
 ```
 
   12. Change the previous graph by adding the argument `position = position_stack()` to `geom_density()`. In your opinion, is this better or worse in terms of telling a story? What are the advantages/disadvantages of each?
   
 ```{r}
-
+Trips %>% 
+  mutate(hour_of_day=hour(sdate),
+         minute_w_hr=(minute(sdate)/60),
+         time_of_day= hour_of_day+minute_w_hr,
+         day_of_week = wday(sdate, label = TRUE)) %>%   
+  ggplot()+
+  geom_density(aes(x=(time_of_day),fill=client),alpha=.5,color=NA, position = position_stack())+
+  labs(x="",
+       y="",
+       title= "Number of rentals at each time of day for each day of the week from 00:00- 24:00.")+
+  facet_wrap(vars(day_of_week))
 ```
-  
+ 
+I think this is worse for storytelling because each time you would like to know the amount of casual riders at a certain time, you must subract the number of registered riders. The registered users are regulars and will continue to come back and rent, and if they wanted rentals to increase they should to worry about the casual renters. The advantages of the plot in 11 are that you can see the amount of each type of rider easily, and an advantage of the plot in 12 is that you can see the total number of renters. However in the plot in 12 you can only see the number of registered riders easily.
+
   13. In this graph, go back to using the regular density plot (without `position = position_stack()`). Add a new variable to the dataset called `weekend` which will be "weekend" if the day is Saturday or Sunday and  "weekday" otherwise (HINT: use the `ifelse()` function and the `wday()` function from `lubridate`). Then, update the graph from the previous problem by faceting on the new `weekend` variable. 
   
 ```{r}
-
+Trips %>% 
+  mutate(hour_of_day=hour(sdate),
+         minute_w_hr=(minute(sdate)/60),
+         time_of_day= hour_of_day+minute_w_hr,
+         day_of_week = wday(sdate, label = TRUE),
+         weekend = ifelse(day_of_week %in% c("Sun", "Sat"), "weekend", "weekday")) %>%   
+  ggplot()+
+  geom_density(aes(x=(time_of_day),fill=client),alpha=.5,color=NA)+
+  labs(x="",
+       y="",
+       title= "Rentals on weekends vs. weekdays at each time of day")+
+  facet_wrap(vars(weekend))
 ```
   
   14. Change the graph from the previous problem to facet on `client` and fill with `weekday`. What information does this graph tell you that the previous didn't? Is one graph better than the other?
   
 ```{r}
-
+Trips %>% 
+  mutate(hour_of_day=hour(sdate),
+         minute_w_hr=(minute(sdate)/60),
+         time_of_day= hour_of_day+minute_w_hr,
+         day_of_week = wday(sdate, label = TRUE),
+         weekend = ifelse(day_of_week %in% c("Sun", "Sat"), "weekend", "weekday")) %>%   
+  ggplot()+
+  geom_density(aes(x=(time_of_day),fill=weekend),alpha=.5,color=NA)+
+  labs(x="",
+       y="",
+       title= "Rentals on weekends vs. weekdays at each time of day")+
+  facet_wrap(vars(client))
 ```
+
+This new graph did not really tell me anything too different from the graph in 13. We can see that the new graph keeps the number of rentals for each type of rider together, however we could still compare the number of rentals for each rider on a weekday vs weekend in the plot in 13. Thus, I don't think one graph is better than the other.
   
 ### Spatial patterns
 
