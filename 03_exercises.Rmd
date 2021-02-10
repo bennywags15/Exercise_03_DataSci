@@ -12,7 +12,7 @@ output:
 
 
 ```{r setup, include=FALSE}
-#knitr::opts_chunk$set(echo = TRUE, error=TRUE, message=FALSE, warning=FALSE)
+knitr::opts_chunk$set(echo = TRUE, error=TRUE, message=FALSE, warning=FALSE)
 ```
 
 ```{r libraries}
@@ -167,7 +167,7 @@ Here is the code to read in the data. We do this a little differently than usual
 
 ```{r cache=TRUE}
 data_site <- 
-  "https://www.macalester.edu/~dshuman1/data/112/2014-Q4-Trips-History-Data-Small.rds" 
+  "https://www.macalester.edu/~dshuman1/data/112/2014-Q4-Trips-History-Data.rds" 
 Trips <- readRDS(gzcon(url(data_site)))
 Stations<-read_csv("http://www.macalester.edu/~dshuman1/data/112/DC-Stations.csv")
 ```
@@ -310,36 +310,86 @@ This new graph did not really tell me anything too different from the graph in 1
   15. Use the latitude and longitude variables in `Stations` to make a visualization of the total number of departures from each station in the `Trips` data. Use either color or size to show the variation in number of departures. We will improve this plot next week when we learn about maps!
   
 ```{r}
-
+Trips %>%
+  group_by(sstation) %>% 
+  summarize(n=n()) %>% 
+  left_join(Stations,
+            by = c("sstation"="name")) %>%  
+  ggplot()+
+  geom_point(aes(x=lat, y=long, color=n))+
+  labs(x="",
+       y="",
+       title = "Latitude and longitude of rental stations and number of depatures by color")
 ```
   
   16. Only 14.4% of the trips in our data are carried out by casual users. Create a plot that shows which area(s) have stations with a much higher percentage of departures by casual users. What patterns do you notice? (Again, we'll improve this next week when we learn about maps).
   
 ```{r}
-
+Trips %>%
+  group_by(sstation) %>% 
+  mutate(is_casual= client %in% "Casual") %>%  
+  mutate(more_casual= sum(is_casual=="TRUE")/sum(is_casual == "FALSE")) %>% 
+  filter(more_casual > 0.5) %>% 
+  left_join(Stations,
+            by = c("sstation"="name")) %>%  
+  ggplot()+
+  geom_point(aes(x=lat, y=long))+
+  labs(x="",
+       y="",
+       title = "Latitude and longitude of rental stations that have more than 50% casual riders",
+       legend.position = "none")
 ```
+
+I notice that the areas where there are a high number of depatures, are also the areas with high numbers of casual riders. 
   
 ### Spatiotemporal patterns
 
   17. Make a table with the ten station-date combinations (e.g., 14th & V St., 2014-10-14) with the highest number of departures, sorted from most departures to fewest. Save this to a new dataset and print out the dataset. Hint: `as_date(sdate)` converts `sdate` from date-time format to date format. 
   
 ```{r}
-
+New_Trips <- Trips  %>%   
+  group_by(sdate=as_date(sdate), sstation) %>% 
+  mutate(n=n()) %>% 
+  arrange(desc(n)) %>% 
+  distinct(n) %>% 
+  head(10)
+New_Trips %>% 
+  print()
 ```
   
   18. Use a join operation to make a table with only those trips whose departures match those top ten station-date combinations from the previous part.
   
 ```{r}
-
+Trips %>%
+  mutate(sdate= as_date(sdate)) %>% 
+  inner_join(New_Trips,
+            by= c("sdate", "sstation")) 
 ```
   
   19. Build on the code from the previous problem (ie. copy that code below and then %>% into the next step.) and group the trips by client type and day of the week (use the name, not the number). Find the proportion of trips by day within each client type (ie. the proportions for all 7 days within each client type add up to 1). Display your results so day of week is a column and there is a column for each client type. Interpret your results.
+
+```{r}
+Trips %>%
+  mutate(sdate= as_date(sdate)) %>% 
+  mutate(day = wday(sdate, label = TRUE)) %>%
+  inner_join(New_Trips,
+            by= c("sdate", "sstation")) %>%
+  group_by(day, client) %>% 
+  summarize(num_ride_day= n()) %>% 
+  mutate(proportion = num_ride_day/sum(num_ride_day)) %>% 
+  pivot_wider(id_cols = day,
+              names_from=client,
+              values_from= proportion)
+```
+
 
 **DID YOU REMEMBER TO GO BACK AND CHANGE THIS SET OF EXERCISES TO THE LARGER DATASET? IF NOT, DO THAT NOW.**
 
 ## GitHub link
 
   20. Below, provide a link to your GitHub page with this set of Weekly Exercises. Specifically, if the name of the file is 03_exercises.Rmd, provide a link to the 03_exercises.md file, which is the one that will be most readable on GitHub.
+  
+
 
 ## Challenge problem! 
 
